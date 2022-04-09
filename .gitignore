@@ -1,0 +1,16 @@
+﻿/TextBinding.sln
+# Default ignored files
+/shelf/
+/workspace.xml
+# Rider ignored files
+/projectSettingsUpdater.xml
+/.idea.TextBinding.iml
+/modules.xml
+/contentModel.xml
+# Editor-based HTTP Client requests
+/httpRequests/
+
+bin/
+debug/
+obj/
+.idea/
