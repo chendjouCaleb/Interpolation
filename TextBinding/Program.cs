@@ -6,12 +6,13 @@ using TextBinding;
 
 //Tokenizer tokenizer = new Tokenizer("bonjour et bienvenue {{(1+2)*4-5%4+x+\"bonjour à tous\" + user.name.surname}}");
 //Tokenizer tokenizer = new Tokenizer("bonjour et bienvenue {{ 1.1.e+2*4-5%4+(1+2*((1))) + cos().x(a+b, b).x + (user.x) }} et sot");
-Tokenizer tokenizer = new Tokenizer("bonjour et bienvenue {{ 1+2+3+5-5*2-1+(1+1)*3}} et sot {{1+2}}");
+Tokenizer tokenizer = new Tokenizer("bonjour et bienvenue {{ 3*-3}} et sot {{((1)+(2))}}");
 tokenizer.Tokenize();
 var tokens = tokenizer.Tokens;
 
 foreach (Token token in tokens)
 {
+    int a = -3*-3;
     //Console.WriteLine(token);
 }
 
@@ -42,3 +43,5 @@ Console.WriteLine(bindingItems.Execute());
 // string name = binding.Get("user");
 // Console.WriteLine(binding.Get("date"));
 // Console.WriteLine(binding.Get("compute1"));
+
+Console.WriteLine(0x_32);

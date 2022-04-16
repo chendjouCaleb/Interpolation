@@ -32,20 +32,23 @@ namespace TextBinding.Expressions
         {
             if (_it.Current.Type == TokenType.Operator)
             {
-                TakeOperator(expression);
+                TakeUnaryOperator(expression);
             }
             else if (_it.Current.Type == TokenType.Number)
             {
                TakeNumber(expression);
+               TakeBinaryOperator(expression);
             }
             else if (_it.Current.Type == TokenType.ParenthesisOpen)
             {
                 TakeSubExpression(expression);
+                TakeBinaryOperator(expression);
             }
-            else if (_it.Current.Type == TokenType.Identifier)
+            else if (_it.Current.Type == TokenType.Id)
             {
                 var item = HandleIdentifier();
                 expression.Add(item);
+                TakeBinaryOperator(expression);
             } 
             else
             {
@@ -148,14 +151,31 @@ namespace TextBinding.Expressions
             //_it.Next();
         }
 
-        private void TakeOperator(BindingExpression expression)
+        private void TakeUnaryOperator(BindingExpression expression)
         {
             OperatorExpressionItem item = new()
             {
-                Name = _it.Current.Value
+                Name = _it.Current.Value,
+                IsBinary = false,
+                IsUnary = true
             };
             expression.Add(item);
             _it.Next();
+        }
+        
+        private void TakeBinaryOperator(BindingExpression expression)
+        {
+            if (_it.Has && _it.Current.Type == TokenType.Operator)
+            {
+                OperatorExpressionItem item = new()
+                {
+                    Name = _it.Current.Value,
+                    IsBinary = true,
+                    IsUnary = false,
+                };
+                expression.Add(item);
+                _it.Next();
+            }
         }
         
         private void TakeSubExpression(BindingExpression expression)

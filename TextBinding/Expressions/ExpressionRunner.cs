@@ -17,10 +17,10 @@ namespace TextBinding.Expressions
         public object Call()
         {
             object? result = null;
-            if (_it.Has && _it.Current.IsCallable)
+            if (_it.Has)
             {
-                result = Call((ValueExpressionItem)_it.Current);
-                _it.Next();
+                result = Call(_it.Current);
+                //_it.Next();
             }
 
             while (_it.Has && _it.Current.IsArithmeticOperator)
@@ -33,20 +33,61 @@ namespace TextBinding.Expressions
             return result;
         }
 
-        public object Call(ValueExpressionItem item)
+        public object Call(IExpressionItem item)
         {
-            if (item is SubExpressionItem subExpressionItem)
+            if (item is OperatorExpressionItem op && op.IsUnary)
             {
-                return new ExpressionRunner(new List<IExpressionItem>(subExpressionItem.Expression.Items)).Call();
-            }else if (item is LiteralExpressionItem value)
+                return CallUnaryOperator(op);
+            }else if (item is ValueExpressionItem value)
             {
-                return value.Value;
+                return CallValue(value);
             }
 
-            throw new InvalidOperationException("Handle expression type: " + item);
+            throw new InvalidOperationException("Uncallable expression item type: " + item.GetType());
         }
-        
-        
+
+        public object CallValue(ValueExpressionItem item)
+        {
+            object result = null;
+            if (item is SubExpressionItem subExpressionItem)
+            {
+               result = new ExpressionRunner(new List<IExpressionItem>(subExpressionItem.Expression.Items)).Call();
+            }
+            else if (item is LiteralExpressionItem value)
+            {
+                result = value.Value;
+            }
+            else
+            {
+                throw new InvalidOperationException("Handle expression type: " + item);
+            }
+            _it.Next();
+            return result;
+        }
+
+
+        private object CallUnaryOperator(OperatorExpressionItem op)
+        {
+            DoubleOperatorOverload operatorOverload = new();
+            _it.Next();
+            object value = CallValue(_it.Current as ValueExpressionItem);
+            object result = null;
+            if (op.Name == "+")
+            {
+                result = operatorOverload.Plus(value);
+            }
+            else if (op.Name == "-")
+            {
+                result = operatorOverload.Minus(value);
+            }
+            else
+            {
+                throw new InvalidOperationException("Unhandled unary operator: " + op.Name);
+            }
+
+            _it.Next();
+            return result;
+        }
 
         private object CallOperator(object currentValue, OperatorExpressionItem op)
         {
@@ -55,7 +96,7 @@ namespace TextBinding.Expressions
             // Skip current op.
             _it.Next();
 
-            object value = Call(_it.Current as ValueExpressionItem);
+            object value = Call(_it.Current);
             _it.Next();
 
             while (_it.Has && _it.Current is OperatorExpressionItem subOp && subOp.Order() > op.Order())

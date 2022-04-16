@@ -9,6 +9,8 @@ namespace TextBinding.Expressions
         private string[] AdditiveOperators = {"+", "-"};
         private string[] MultiplicativeOperators = {"*", "/", "%"};
         public string Name { get; set; }
+        public bool IsUnary { get; set; }
+        public bool IsBinary { get; set; }
 
         public override string ToString()
         {
@@ -17,6 +19,10 @@ namespace TextBinding.Expressions
 
         public int Order()
         {
+            if (AdditiveOperators.Contains(Name) && IsUnary)
+            {
+                return 17;
+            }
             if (EqualityOperators.Contains(Name))
             {
                 return 8;

@@ -7,14 +7,20 @@
         ParenthesisClose,
         Property,
         String,
-        Identifier,
+        Id,
         Open,
         Close,
         Methods,
+        Char,
         Number,
         Operator,
         Comma,
-        Dot
+        Dot,
+        Decimal,
+        Binary,
+        Octal,
+        Hexadecimal,
+        Integer
         
     }
 }

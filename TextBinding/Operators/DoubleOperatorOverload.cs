@@ -11,6 +11,16 @@ namespace TextBinding.Operators
             return (double) a + (double) b;
         }
 
+        public object Plus(object a)
+        {
+            return +(double)a;
+        }
+        
+        public object Minus(object a)
+        {
+            return -(double)a;
+        }
+
         public object Subtract(object a, object b)
         {
             return (double) a - (double) b;

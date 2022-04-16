@@ -4,15 +4,15 @@ namespace TextBinding.Utilities
 {
     public class TextIterator
     {
-        private TokenIndex _index = new ();
-        private string _text;
+        private readonly TokenIndex _index = new ();
+        public string Text { get; }
 
         public TokenIndex Index => new (_index);
 
-        public bool HasMore => _index.Index < _text.Length - 1;
+        public bool HasMore => _index.Index < Text.Length - 1;
 
-        public bool Has => _index.Index <= _text.Length - 1;
-        public char Current => _text[_index.Index];
+        public bool Has => _index.Index <= Text.Length - 1;
+        public char Current => Text[_index.Index];
         
 
         public TextIterator(string text)
@@ -22,7 +22,7 @@ namespace TextBinding.Utilities
                 throw new InvalidOperationException("Cannot iterate on null or empty text");
             }
 
-            _text = text;
+            Text = text;
         }
 
         public bool IsIn(string value)
@@ -53,6 +53,11 @@ namespace TextBinding.Utilities
 
         public bool Is(char c) => Has && Current == c;
         public bool IsNot(char c) => !Has || Current != c;
+
+        public bool IsInRange(char a, char b)
+        {
+            return Has && Current >= a && Current <= b;
+        }
         
         public bool Next()
         {
@@ -66,11 +71,11 @@ namespace TextBinding.Utilities
             if (Has && Current == '\n')
             {
                 _index.Line += 1;
-                _index.LineIndex = 0;
+                _index.Col = 0;
             }
             else
             {
-                _index.LineIndex += 1;
+                _index.Col += 1;
             }
 
             

@@ -20,9 +20,12 @@ namespace TextBinding
         IEnumerator IEnumerable.GetEnumerator() => _tokens.GetEnumerator();
 
         public int Count => _tokens.Count;
+        public Token First => _tokens[0];
+        public Token Last => _tokens[^1];
         
         
-        public List<Token> ToList() => new List<Token>(_tokens);
+        
+        public List<Token> ToList() => new (_tokens);
         
         public void Add(Token item) => _tokens.Add(item);
         public Token this[int index] => _tokens[index];
