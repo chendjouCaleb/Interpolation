@@ -1,320 +1,199 @@
 ﻿using NUnit.Framework;
 using TextBinding;
-using TextBinding.Utilities;
 
 namespace InterpolationTests
 {
     public class TokenizerTests
     {
-        
-
-        [SetUp]
-        public void BeforeEach()
-        {
-        }
-
         [Test]
-        public void Create()
+        public void TextBeforeOpenShouldBeTakenAsText()
         {
-            string text = "Welcome {{1+1}}";
-            Tokenizer tokenizer = new(text);
-
-            Assert.AreEqual(text, tokenizer.Iterator.Text);
-            Assert.AreEqual(TokenIndex.Zero, tokenizer.Iterator.Index);
-        }
-
-        [Test]
-        public void TakeText()
-        {
-            string text = "Hello word!";
-            Tokenizer tokenizer = new(text);
-            Token token = tokenizer.TakeText();
-
+            string text = "1+1-3+(1.c)";
+            Tokenizer tokenizer = new (text + "{{");
+            tokenizer.Tokenize();
+            
+            Assert.AreEqual(2, tokenizer.Tokens.Count);
+            Token token = tokenizer.Tokens[0];
+            
             Assert.AreEqual(text, token.Value);
             Assert.AreEqual(TokenType.Text, token.Type);
-            Assert.AreEqual(TokenIndex.Zero, token.StartIndex);
+        }
 
-            Assert.AreEqual(new TokenIndex(text.Length, 0, text.Length), tokenizer.Index);
-            Assert.AreEqual(tokenizer.Tokens.Count, 1);
+
+        [Test]
+        public void TextAfterCloseShouldBeTakenAsText()
+        {
+            string text = "1+1-3+(1.c)";
+            string expression = " Welcome! {{1+3*3}}";
+            Tokenizer tokenizer = new (expression + text);
+            tokenizer.Tokenize();
+
+            Token token = tokenizer.Tokens.Last;
+            
+            Assert.AreEqual(text, token.Value);
+            Assert.AreEqual(TokenType.Text, token.Type);
         }
         
+        
         [Test]
-        public void TakeExpressionWithoutOpenBraceAsText()
+        public void SingleOpenBrace_ShouldBeTakenAsText()
         {
-            string text = "1+3}}";
-            Tokenizer tokenizer = new(text);
-            Token token = tokenizer.TakeText();
+            string text = " Welcome! {";
+            Tokenizer tokenizer = new ( text);
+            tokenizer.Tokenize();
 
-            Assert.AreEqual(text, token.Value);
-            Assert.AreEqual(TokenType.Text, token.Type);
-            Assert.AreEqual(TokenIndex.Zero, token.StartIndex);
-
-            Assert.AreEqual(new TokenIndex(text.Length, 0, text.Length), tokenizer.Index);
-            Assert.AreEqual(tokenizer.Tokens.Count, 1);
-        }
-
-        [Test]
-        public void TakeTextShouldStopBeforeExpressionStart()
-        {
-            string text = "Hello word!";
-            string expression = "{{ 1+1 }}";
-            Tokenizer tokenizer = new(text + expression);
-            Token token = tokenizer.TakeText();
-
-            Assert.AreEqual(text, token.Value);
-            Assert.AreEqual(TokenType.Text, token.Type);
-            Assert.AreEqual(TokenIndex.Zero, token.StartIndex);
-
-            Assert.AreEqual(new TokenIndex(text.Length, 0, text.Length), tokenizer.Index);
-            Assert.AreEqual(tokenizer.Tokens.Count, 1);
-        }
-
-
-        [Test]
-        public void TakeExpressionOpen()
-        {
-            string expression = "{{ 1+1 }}";
-            Tokenizer tokenizer = new(expression);
-            Token? token = tokenizer.TryTakeOpen();
-
-            Assert.NotNull(token);
-            Assert.AreEqual("{{", token?.Value);
-            Assert.AreEqual(TokenType.Open, token?.Type);
-            Assert.AreEqual(TokenIndex.Zero, token?.StartIndex);
-
-            Assert.AreEqual(new TokenIndex(2, 0, 2), tokenizer.Index);
-            Assert.AreEqual(tokenizer.Tokens.Count, 1);
-        }
-
-        [Test]
-        public void TakeExpressionOpen_WithOneBrace_ShouldReturnTextToken()
-        {
-            string expression = "{ 1+1 }}";
-            Tokenizer tokenizer = new(expression);
-            Token token = tokenizer.TryTakeOpen();
-
+            Token token = tokenizer.Tokens.Last;
+            
             Assert.AreEqual("{", token.Value);
             Assert.AreEqual(TokenType.Text, token.Type);
-            Assert.AreEqual(TokenIndex.Zero, token.StartIndex);
-
-            Assert.AreEqual(new TokenIndex(1, 0, 1), tokenizer.Index);
-            Assert.AreEqual(tokenizer.Tokens.Count, 1);
         }
 
         [Test]
-        public void TakeExpressionClose()
+        public void OpenBraces_ShouldOpen()
         {
-            string expression = "}}";
-            Tokenizer tokenizer = new(expression);
-            Token? token = tokenizer.TryTakeClose();
+            string text = " Welcome! {{ 1+1 }}";
+            Tokenizer tokenizer = new (text);
+            tokenizer.Take();
+            tokenizer.Take();
 
-            Assert.NotNull(token);
-            Assert.AreEqual("}}", token?.Value);
-            Assert.AreEqual(TokenType.Close, token?.Type);
-            Assert.AreEqual(TokenIndex.Zero, token?.StartIndex);
-
-            Assert.AreEqual(new TokenIndex(2, 0, 2), tokenizer.Index);
-            Assert.AreEqual(tokenizer.Tokens.Count, 1);
-        }
-
-        [Test]
-        public void TryTakeExpressionWithOneBraceShouldThrow()
-        {
-            string expression = "}";
-            Tokenizer tokenizer = new(expression);
-            ExpressionException ex = Assert.Throws<ExpressionException>(() => tokenizer.TryTakeClose())!;
+            Token token = tokenizer.Tokens.Last;
             
-            Assert.AreEqual(ExpressionError.UnknownToken, ex.Error);
-            Assert.AreEqual(TokenIndex.Zero, ex.Index);
-        }
-
-
-        [Test]
-        public void TakeId()
-        {
-            string[] texts = {"text", "_text", "_text11", "_32", "_e_a1", "true", "false"};
-
-            foreach (string text in texts)
-            {
-                Tokenizer tokenizer = new(text);
-                Token? token = tokenizer.TakeIdentifier();
-                Assert.NotNull(token);
-                Assert.AreEqual(text, token.Value);
-                Assert.AreEqual(TokenType.Id, token.Type);
-                Assert.AreEqual(TokenIndex.Zero, token?.StartIndex);
-
-                Assert.AreEqual(new TokenIndex(text.Length, 0, text.Length), tokenizer.Index);
-                Assert.AreEqual(tokenizer.Tokens.Count, 1);
-            }
-        }
-
-        [Test]
-        public void TakeSingleOperator()
-        {
-            string op = "[]().,:+-*/%!|&=<>?";
-            foreach (char c in op)
-            {
-                string text = c.ToString();
-                Tokenizer tokenizer = new(text);
-                Token token = tokenizer.TakeOperator();
-                Assert.NotNull(token);
-                Assert.AreEqual(text, token.Value);
-                Assert.AreEqual(TokenType.Operator, token.Type);
-                Assert.AreEqual(TokenIndex.Zero, token.StartIndex);
-
-                Assert.AreEqual(TokenIndex.To(text.Length), tokenizer.Index);
-                Assert.AreEqual(tokenizer.Tokens.Count, 1);
-            }
+            Assert.True(tokenizer.IsOpen);
+            Assert.AreEqual("{{", token.Value);
+            Assert.AreEqual(TokenType.Open, token.Type);
         }
         
         [Test]
-        public void TakeMultiCharOperator()
+        public void CloseBraces_ShouldClose()
         {
-            string[] ops = {"[", "?.", "==", "<=", "<=", "&&", "||", "(("};
-            foreach (string text in ops)
-            {
-                Tokenizer tokenizer = new(text);
-                Token token = tokenizer.TakeOperator();
-                Assert.NotNull(token);
-                Assert.AreEqual(text, token.Value);
-                Assert.AreEqual(TokenType.Operator, token.Type);
-                Assert.AreEqual(TokenIndex.Zero, token.StartIndex);
+            string text = " Welcome! {{ 1 }} text";
+            Tokenizer tokenizer = new (text);
+            tokenizer.Take(4);
 
-                Assert.AreEqual(TokenIndex.To(text.Length), tokenizer.Index);
-                Assert.AreEqual(tokenizer.Tokens.Count, 1);
-            }
-        }
-        
-        
-        [Test]
-        public void TakeOperatorShouldStopAtNotOperatorChar()
-        {
-            string[] ops = {"?.k", "==", "<=1", "<=e", "&&_", "||ç", "((a"};
-            foreach (string text in ops)
-            {
-                Tokenizer tokenizer = new(text);
-                Token token = tokenizer.TakeOperator();
-                Assert.NotNull(token);
-                Assert.AreEqual(text.Substring(0, 2), token.Value);
-                Assert.AreEqual(TokenType.Operator, token.Type);
-                Assert.AreEqual(TokenIndex.Zero, token.StartIndex);
-
-                Assert.AreEqual(TokenIndex.To(2), tokenizer.Index);
-                Assert.AreEqual(tokenizer.Tokens.Count, 1);
-            }
-        }
-        
-      
-        [Test]
-        public void TakeInteger()
-        {
-            string[] texts = {"12", "132", "3212"};
-            foreach (string text in texts)
-            {
-                Tokenizer tokenizer = new(text);
-                Token? token = tokenizer.TakeInteger();
-
-                Assert.NotNull(token);
-                Assert.AreEqual(text, token.Value);
-                Assert.AreEqual(TokenType.Integer, token.Type);
-                Assert.AreEqual(TokenIndex.Zero, token.StartIndex);
-
-                Assert.AreEqual(TokenIndex.To(text.Length), tokenizer.Index);
-                Assert.AreEqual(tokenizer.Tokens.Count, 1);
-            }
+            Token token = tokenizer.Tokens.Last;
+            Assert.AreEqual(4, tokenizer.Tokens.Count);
+            Assert.False(tokenizer.IsOpen);
+            Assert.AreEqual("}}", token.Value);
+            Assert.AreEqual(TokenType.Close, token.Type);
         }
 
-
         [Test]
-        public void TakeDecimal()
+        [TestCase("{{+}}", "+")]
+        [TestCase("{{/}}", "/")]
+        [TestCase("{{%}}", "%")]
+        [TestCase("{{*}}", "*")]
+        [TestCase("{{.}}", ".")]
+        [TestCase("{{++}}", "++")]
+        [TestCase("{{?.}}", "?.")]
+        [TestCase("{{+?.+}}", "+?.+")]
+        public void TakeOperatorAtOperator(string text, string op)
         {
-            string text = "01234";
-            Tokenizer tokenizer = new(text);
-            Token token = tokenizer.TakeZeroNumber();
+            Tokenizer tokenizer = new (text);
+            tokenizer.Take(2);
 
-            Assert.NotNull(token);
-            Assert.AreEqual(text, token.Value);
-            Assert.AreEqual(TokenType.Decimal, token.Type);
-            Assert.AreEqual(TokenIndex.Zero, token.StartIndex);
-
-            Assert.AreEqual(TokenIndex.To(text.Length), tokenizer.Index);
-            Assert.AreEqual(tokenizer.Tokens.Count, 1);
-        }
-        
-        
-        
-        [Test]
-        [TestCase("0o1234", "0o1234")]
-        [TestCase("0o123489", "0o1234")]
-        [TestCase("0o1234-", "0o1234")]
-        public void TakeOctal(string inputText, string tokenValue)
-        {
-            Tokenizer tokenizer = new(inputText);
-            Token token = tokenizer.TakeZeroNumber();
-
-            AssertFirstToken(token, tokenValue, tokenizer, TokenType.Octal);
+            Token token = tokenizer.Tokens.Last;
+            Assert.AreEqual(op, token.Value);
+            Assert.AreEqual(TokenType.Operator, token.Type);
         }
         
         [Test]
-        [TestCase("0x1234", "0x1234")]
-        [TestCase("0x123489", "0x123489")]
-        [TestCase("0xe1234A", "0xe1234A")]
-        [TestCase("0x1234Z", "0x1234")]
-        [TestCase("0x1e2E3Fef4g", "0x1e2E3Fef4")]
-        [TestCase("0xeee-", "0xeee")]
-        public void TakeHexadecimal(string inputText, string tokenValue)
+        [TestCase("{{(}}", "(")]
+        [TestCase("{{((}}", "(")]
+        [TestCase("{{)}}", ")")]
+        [TestCase("{{))}}", ")")]
+        public void TakeParenthesisAtParenthesis(string text, string op)
         {
-            Tokenizer tokenizer = new(inputText);
-            Token token = tokenizer.TakeZeroNumber();
+            Tokenizer tokenizer = new (text);
+            tokenizer.Take(2);
 
-            AssertFirstToken(token, tokenValue, tokenizer, TokenType.Hexadecimal);
+            Token token = tokenizer.Tokens.Last;
+            Assert.AreEqual(op, token.Value);
+            Assert.AreEqual(TokenType.Parenthesis, token.Type);
+        }
+        
+        [Test]
+        [TestCase("{{ [ }}", "[")]
+        [TestCase("{{ [[ }}", "[")]
+        [TestCase("{{ ] }}", "]")]
+        [TestCase("{{ ]] }}", "]")]
+        public void TakeBracketAtBracket(string text, string op)
+        {
+            Tokenizer tokenizer = new (text);
+            tokenizer.Take(2);
+
+            Token token = tokenizer.Tokens.Last;
+            Assert.AreEqual(op, token.Value);
+            Assert.AreEqual(TokenType.Brackets, token.Type);
         }
         
         
         [Test]
-        [TestCase("0b10114", "0b1011")]
-        [TestCase("0b00012", "0b0001")]
-        [TestCase("0b0001a", "0b0001")]
-        [TestCase("0b0001", "0b0001")]
-        [TestCase("0b0001-", "0b0001")]
-        public void TakeBinary(string inputText, string tokenValue)
+        [TestCase("{{ , }}", ",")]
+        [TestCase("{{ ; }}", ";")]
+        [TestCase("{{ : }}", ":")]
+        public void TakePunctuationAtPunctuator(string text, string op)
         {
-            Tokenizer tokenizer = new(inputText);
-            Token token = tokenizer.TakeZeroNumber();
+            Tokenizer tokenizer = new (text);
+            tokenizer.Take(2);
 
-            AssertFirstToken(token, tokenValue, tokenizer, TokenType.Binary);
+            Token token = tokenizer.Tokens.Last;
+            Assert.AreEqual(op, token.Value);
+            Assert.AreEqual(TokenType.Punctuator, token.Type);
         }
 
-        
-        [Test]
-        [TestCase("'a'b", "'a'")]
-        public void TakeCharLiteral(string inputText, string tokenValue)
-        {
-            Tokenizer tokenizer = new(inputText);
-            Token token = tokenizer.TakeChar();
-
-            AssertFirstToken(token, tokenValue, tokenizer, TokenType.Char);
-        }
 
         [Test]
-        [TestCase("\"welcome\"+", "\"welcome\"")]
-        public void TakeStringLiteral(string inputText, string tokenValue)
+        [TestCase("{{0x23}}", "0x23", TokenType.Hexadecimal)]
+        [TestCase("{{0x}}", "0x", TokenType.Hexadecimal)]
+        [TestCase("{{0o23}}", "0o23", TokenType.Octal)]
+        [TestCase("{{0o}}", "0o", TokenType.Octal)]
+        [TestCase("{{0b111}}", "0b111", TokenType.Binary)]
+        [TestCase("{{0b}}", "0b", TokenType.Binary)]
+        [TestCase("{{0d123}}", "0d123", TokenType.Decimal)]
+        [TestCase("{{0123}}", "0123", TokenType.Decimal)]
+        [TestCase("{{0}}", "0", TokenType.Decimal)]
+        public void TakeIntegerAtZero(string text, string val, TokenType type)
         {
-            Tokenizer tokenizer = new(inputText);
-            Token token = tokenizer.TakeString();
-
-            AssertFirstToken(token, tokenValue, tokenizer, TokenType.String);   
-        }
-        
-        private void AssertFirstToken(Token? token, string text, Tokenizer tokenizer, TokenType type)
-        {
-            Assert.NotNull(token);
-            Assert.AreEqual(text, token.Value);
+            Tokenizer tokenizer = new (text);
+            tokenizer.Take(2);
+            Token token = tokenizer.Tokens.Last;
+            Assert.AreEqual(val, token.Value);
             Assert.AreEqual(type, token.Type);
-            Assert.AreEqual(TokenIndex.Zero, token.StartIndex);
-
-            Assert.AreEqual(TokenIndex.To(text.Length), tokenizer.Index);
-            Assert.AreEqual(tokenizer.Tokens.Count, 1);
+        }
+        
+        [Test]
+        [TestCase("{{10}}", "10")]
+        [TestCase("{{101}}", "101")]
+        [TestCase("{{90000}}", "90000")]
+        public void TakeRealAtDigitOtherThanZero(string text, string val)
+        {
+            Tokenizer tokenizer = new (text);
+            tokenizer.Take(2);
+            Token token = tokenizer.Tokens.Last;
+            Assert.AreEqual(val, token.Value);
+            Assert.AreEqual(TokenType.Integer, token.Type);
+        }
+        
+        
+        [TestCase("{{\"welcome !\"}}", "\"welcome !\"")]
+        public void TakeString(string text, string val)
+        {
+            Tokenizer tokenizer = new (text);
+            tokenizer.Take(2);
+            Token token = tokenizer.Tokens.Last;
+            Assert.AreEqual(val, token.Value);
+            Assert.AreEqual(TokenType.String, token.Type);
+        }
+        
+        
+        [TestCase("{{'c'}}", "'c'")]
+        public void TakeChar(string text, string val)
+        {
+            Tokenizer tokenizer = new (text);
+            tokenizer.Take(2);
+            Token token = tokenizer.Tokens.Last;
+            Assert.AreEqual(val, token.Value);
+            Assert.AreEqual(TokenType.Char, token.Type);
         }
     }
 }

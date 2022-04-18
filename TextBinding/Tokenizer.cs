@@ -6,16 +6,17 @@ namespace TextBinding
 {
     public class Tokenizer
     {
-        private TokenList _tokens = new();
+        private readonly TokenList _tokens = new();
         public TextIterator Iterator { get; }
-        private TextCollector _collector;
-        public static string Operators = "[]().,:+-*/%!|&=<>?:";
+        
+        public static string Operators = ".+-*/%!|&=<>?";
+        public static string Punctuators = ",:;";
         private TextIterator _it => Iterator;
 
         public TokenIndex Index => Iterator.Index;
 
 
-        private bool _isOpen;
+        public bool IsOpen { get; private set; }
 
         public TokenList Tokens => new(_tokens);
 
@@ -27,70 +28,86 @@ namespace TextBinding
             }
 
             Iterator = new TextIterator(text);
-            _collector = new TextCollector(_it);
         }
 
         public void Tokenize()
         {
             while (_it.Has)
             {
-                if (_it.Current == '{')
-                {
-                    _isOpen = TryTakeOpen() != null;
-                }
+               Take();
+            }
+        }
 
-                else if (_it.Current == '}')
+        public void Take(int count)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                if (_it.Has)
                 {
-                    _isOpen = TryTakeClose() == null;
-                }
-
-                else if (_isOpen)
-                {
-                    if (_it.IsDigit())
-                    {
-                        TakeNumber();
-                    }
-                    else if (_it.IsLetter() || _it.Is('_'))
-                    {
-                        TakeIdentifier();
-                    }
-                    else if (_it.IsIn(Operators))
-                    {
-                        TakeCurrent(TokenType.Operator);
-                    }
-                    else if (_it.Is(','))
-                    {
-                        TakeCurrent(TokenType.Comma);
-                    }
-                    else if (_it.IsIn("."))
-                    {
-                        TakeCurrent(TokenType.Dot);
-                    }
-                    else if (_it.Is('"'))
-                    {
-                        TakeString();
-                    }
-                    else if (_it.IsIn("("))
-                    {
-                        TakeCurrent(TokenType.ParenthesisOpen);
-                    }
-                    else if (_it.IsIn(")"))
-                    {
-                        TakeCurrent(TokenType.ParenthesisClose);
-                    }
-                    else if (_it.IsIn(Strings.AsciiWhiteSpaces))
-                    {
-                        SkipWhiteSpace();
-                    }
-                    else if (_it.Is('}'))
-                    {
-                        _isOpen = TryTakeClose() == null;
-                    }
+                    Take();
                 }
                 else
                 {
-                    TakeText();
+                    break;
                 }
+                
+            }
+        }
+
+        public void Take()
+        {
+            if (!IsOpen && _it.Is('{'))
+            {
+                IsOpen = TryTakeOpen().Type == TokenType.Open;
+            }
+
+            else if (IsOpen)
+            {
+                SkipWhiteSpace();
+                if (_it.IsIn("123456789"))
+                {
+                    TakeReal();
+                }else if (_it.Is('0'))
+                {
+                    TakeInteger();
+                }
+                else if (_it.IsLetter() || _it.Is('_'))
+                {
+                    TakeIdentifier();
+                }
+                else if (_it.IsIn(Operators))
+                {
+                    TakeOperator();
+                }
+                else if (_it.Is('"'))
+                {
+                    TakeString();
+                }else if (_it.IsIn(Punctuators))
+                {
+                    TakePunctuators();
+                }
+                else if (_it.Is('\''))
+                {
+                    TakeChar();
+                }
+                else if (_it.IsIn("()"))
+                {
+                    TakeParenthesis();
+                }
+                else if (_it.IsIn("[]"))
+                {
+                    TakeBrackets();
+                }
+                
+                else if (_it.Is('}'))
+                {
+                    TryTakeClose();
+                    IsOpen = false;
+                }
+            }
+            else
+            {
+                TakeText();
             }
         }
 
@@ -105,7 +122,7 @@ namespace TextBinding
                 _it.Next();
             }
 
-            Token token = new Token(builder.ToString(), TokenType.Text, index);
+            Token token = new (builder.ToString(), TokenType.Text, index);
             _tokens.Add(token);
             return token;
         }
@@ -242,8 +259,42 @@ namespace TextBinding
             _tokens.Add(token);
             return token;
         }
+        
+        
+        public Token TakeParenthesis()
+        {
+            Assertions.IsTrue(_it.IsIn("()"));
+            
+            Token token = new (_it.Current.ToString(), TokenType.Parenthesis, _it.Index);
+            _it.Next();
+            _tokens.Add(token);
+            return token;
+        }
+        
+        
+        public Token TakeBrackets()
+        {
+            Assertions.IsTrue(_it.IsIn("[]"));
+            
+            Token token = new (_it.Current.ToString(), TokenType.Brackets, _it.Index);
+            _it.Next();
+            _tokens.Add(token);
+            return token;
+        }
+        
+        
+        public Token TakePunctuators()
+        {
+            Assertions.IsTrue(_it.IsIn(Punctuators));
+            
+            Token token = new (_it.Current.ToString(), TokenType.Punctuator, _it.Index);
+            _it.Next();
+            _tokens.Add(token);
+            return token;
+        }
+        
 
-        public Token TakeInteger()
+        public Token TakeReal()
         {
             Assertions.IsTrue(_it.IsIn("12346789"));
             var index = _it.Index;
@@ -260,7 +311,7 @@ namespace TextBinding
             return token;
         }
 
-        public Token TakeZeroNumber()
+        public Token TakeInteger()
         {
             Assertions.IsTrue(_it.Is('0'));
             TokenIndex index = _it.Index;
@@ -274,6 +325,10 @@ namespace TextBinding
             }else if (_it.Is('o'))
             {
                 return TakeOctal(index);
+            }
+            if (_it.Is('d'))
+            {
+                return TakeDecimal(index);
             }
 
             return TakeDecimal(index);
@@ -295,7 +350,7 @@ namespace TextBinding
 
             if (_it.Is('\''))
             {
-                builder.Append("'");
+                builder.Append('\'');
                 _it.Next();
             }
 
@@ -307,6 +362,11 @@ namespace TextBinding
         public Token TakeDecimal(TokenIndex index)
         {
             var builder = new StringBuilder("0");
+            if (_it.Is('d'))
+            {
+                builder.Append('d');
+                _it.Next();
+            }
             while (_it.IsIn("123467890"))
             {
                 builder.Append(_it.Current);
