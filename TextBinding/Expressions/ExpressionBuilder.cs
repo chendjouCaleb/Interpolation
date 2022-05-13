@@ -1,21 +1,30 @@
 ﻿using System;
 using System.Globalization;
+using TextBinding.Operators;
 using TextBinding.Utilities;
 
 namespace TextBinding.Expressions
 {
     public class ExpressionBuilder
     {
-        private string _text;
-        private Iterator<Token> _it;
+        private readonly Iterator<Token> _it;
 
         public ExpressionBuilder(Iterator<Token> it)
         {
             _it = it;
         }
 
+        public BindingExpression Build()
+        {
+            SkipOpen();
+            BindingExpression expression = new();
+            Build(expression);
+            return expression;
+        }
+
         public void Build(BindingExpression expression)
         {
+            SkipOpen();
             while (_it.Has && _it.Current.Type != TokenType.Close)
             {
                 Take(expression);
@@ -27,34 +36,95 @@ namespace TextBinding.Expressions
             }
         }
 
+        public BindingExpression Take(int count)
+        {
+            SkipOpen();
+            BindingExpression expression = new();
+            for (int i = 0; i < count; i++)
+            {
+                Take(expression);
+            }
+
+            return expression;
+        }
+
 
         public void Take(BindingExpression expression)
         {
+            //var x = -1 - 2 + +3;
             if (_it.Current.Type == TokenType.Operator)
             {
                 TakeUnaryOperator(expression);
             }
-            else if (_it.Current.Type == TokenType.Number)
+
+            if (_it.Has && _it.Current.Type == TokenType.Integer)
             {
-               TakeNumber(expression);
-               TakeBinaryOperator(expression);
+                var item = TakeInteger(expression);
             }
-            else if (_it.Current.Type == TokenType.ParenthesisOpen)
+            else if (_it.Has && _it.Current.Type == TokenType.ParenthesisOpen)
             {
                 TakeSubExpression(expression);
+            }
+            else if (_it.Has && _it.Current.Type == TokenType.Id)
+            {
+                HandleWord(expression);
+            }
+
+            if (_it.Has && _it.Current.Type == TokenType.Operator)
+            {
                 TakeBinaryOperator(expression);
             }
-            else if (_it.Current.Type == TokenType.Id)
+
+            // else
+            // {
+            //     throw new InvalidOperationException("Invalid token for expression: " + _it.Current);
+            // }
+        }
+
+        private IntegerExpressionItem TakeInteger(BindingExpression expression)
+        {
+            IntegerExpressionItem item = new(int.Parse(_it.Current.Value, CultureInfo.InvariantCulture))
             {
-                var item = HandleIdentifier();
+                Name = _it.Current.Value
+            };
+            _it.Next();
+
+            expression.Add(item);
+            return item;
+        }
+
+        private void HandleWord(BindingExpression expression)
+        {
+            if (_it.Has && _it.Current.Value == "true")
+            {
+                BooleanExpressionItem item = new(true);
+                _it.Next();
                 expression.Add(item);
-                TakeBinaryOperator(expression);
-            } 
+            }
+            else if (_it.Has && _it.Current.Value == "false")
+            {
+                BooleanExpressionItem item = new(false);
+                _it.Next();
+                expression.Add(item);
+            }
+            else if (_it.Current.Value == "null")
+            {
+                NullExpressionItem item = new();
+                _it.Next();
+                expression.Add(item);
+            }
             else
             {
-                throw new InvalidOperationException("Invalid token for expression: " + _it.Current);
+                PropertyExpressionItem item = new();
+                item.ExpressionType = ExpressionValueType.Property;
+                item.Name = _it.Current.Value;
+                _it.Next();
+                expression.Add(item);
             }
         }
+        
+        
+
 
         private ValueExpressionItem HandleIdentifier()
         {
@@ -62,16 +132,25 @@ namespace TextBinding.Expressions
             _it.Next();
             if (_it.Current.Type == TokenType.ParenthesisOpen)
             {
-               return TakeMethod(identifier);
+                return TakeMethod(identifier);
             }
+
             return TakeProperty(identifier);
+        }
+
+        private void SkipOpen()
+        {
+            if (_it.Has && _it.Current.Type == TokenType.Open)
+            {
+                _it.Next();
+            }
         }
 
         private MethodExpressionItem TakeMethod(string identifier)
         {
             // Skip '('.
             _it.Next();
-            MethodExpressionItem item = new ()
+            MethodExpressionItem item = new()
             {
                 Name = identifier,
                 ExpressionType = ExpressionValueType.Method
@@ -81,14 +160,14 @@ namespace TextBinding.Expressions
             {
                 item.ParamExpressions.Add(TakeMethodParamsExpression());
             }
-            
+
             // Skip ')'.
             _it.Next();
             TakeChain(item);
 
             return item;
         }
-        
+
         private PropertyExpressionItem TakeProperty(string identifier)
         {
             PropertyExpressionItem item = new()
@@ -107,7 +186,6 @@ namespace TextBinding.Expressions
             {
                 TakeNext(item, null);
             }
-            
         }
 
         private ValueExpressionItem TakeNext(ValueExpressionItem? item, ValueExpressionItem? prev)
@@ -119,7 +197,7 @@ namespace TextBinding.Expressions
             //_it.Next();
             if (prev != null)
             {
-                prev.Field = next;   
+                prev.Field = next;
             }
             else
             {
@@ -134,55 +212,120 @@ namespace TextBinding.Expressions
             return next;
         }
 
-        private void TakeNumber(BindingExpression expression)
+
+        private OperatorExpressionItem? TakeUnaryOperator(BindingExpression expression)
         {
-            LiteralExpressionItem item = new(double.Parse(_it.Current.Value, CultureInfo.InvariantCulture), ExpressionValueType.Number)
+            if (!_it.Has || _it.Current.Type != TokenType.Operator)
             {
-                Name = _it.Current.Value
-            };
-            _it.Next();
-            
-            if (_it.Has && _it.Current.Type == TokenType.Dot)
-            {
-                TakeNext(item, null);
+                return null;
             }
 
-            expression.Add(item);
-            //_it.Next();
+            Token token = _it.Current;
+            OperatorExpressionItem? op;
+            if (token.Value == "+")
+            {
+                op = new(Operator.Plus);
+            }
+            else if (token.Value == "-")
+            {
+                op = new(Operator.Minus);
+            }
+            else
+            {
+                throw new ExpressionException(ExpressionError.UnknownUnaryOperator, _it.Current.StartIndex,
+                    $"L'operateur {token.Value} est inconnu.");
+            }
+
+            expression.Add(op);
+            _it.Next();
+            return op;
         }
 
-        private void TakeUnaryOperator(BindingExpression expression)
+
+        private OperatorExpressionItem? TakeBinaryOperator(BindingExpression expression)
         {
-            OperatorExpressionItem item = new()
+            if (!(_it.Has && _it.Current.Type == TokenType.Operator))
             {
-                Name = _it.Current.Value,
-                IsBinary = false,
-                IsUnary = true
-            };
-            expression.Add(item);
-            _it.Next();
-        }
-        
-        private void TakeBinaryOperator(BindingExpression expression)
-        {
-            if (_it.Has && _it.Current.Type == TokenType.Operator)
+                return null;
+            }
+
+            Token token = _it.Current;
+            OperatorExpressionItem? item = null;
+
+            if (token.Value == "+")
             {
-                OperatorExpressionItem item = new()
-                {
-                    Name = _it.Current.Value,
-                    IsBinary = true,
-                    IsUnary = false,
-                };
+                item = new(Operator.Add);
+            }
+            else if (token.Value == "-")
+            {
+                item = new(Operator.Subtract);
+            }
+            else if (token.Value == "*")
+            {
+                item = new(Operator.Mul);
+            }
+            else if (token.Value == "/")
+            {
+                item = new(Operator.Div);
+            }
+            else if (token.Value == "%")
+            {
+                item = new(Operator.Modulo);
+            }
+            else if (token.Value == "&&")
+            {
+                item = new(Operator.And);
+            }
+            else if (token.Value == "||")
+            {
+                item = new(Operator.Or);
+            }
+            else if (token.Value == "??")
+            {
+                item = new(Operator.NullCoalescing);
+            }
+            else if (token.Value == "==")
+            {
+                item = new(Operator.Equal);
+            }
+            else if (token.Value == "!=")
+            {
+                item = new(Operator.NotEqual);
+            }
+            else if (token.Value == "<")
+            {
+                item = new(Operator.LowerThan);
+            }
+            else if (token.Value == ">")
+            {
+                item = new(Operator.UpperThan);
+            }
+            else if (token.Value == "<=")
+            {
+                item = new(Operator.LowerOrEqualThan);
+            }
+            else if (token.Value == ">=")
+            {
+                item = new(Operator.UpperOrEqualThan);
+            }else if (token.Value == "?")
+            {
+                item = new(Operator.Ternary);
+            }
+
+            if (item != null)
+            {
                 expression.Add(item);
                 _it.Next();
             }
+
+            return item;
         }
-        
+
         private void TakeSubExpression(BindingExpression expression)
         {
             // skip current '('
             _it.Next();
-            SubExpressionItem item = new ();
+            SubExpressionItem item = new();
             while (_it.Has && _it.Current.Type != TokenType.ParenthesisClose)
             {
                 Take(item.Expression);
@@ -192,13 +335,14 @@ namespace TextBinding.Expressions
             {
                 _it.Next();
             }
+
             expression.Add(item);
-            TakeChain(item);
+            //TakeChain(item);
         }
-        
+
         private BindingExpression TakeMethodParamsExpression()
         {
-            BindingExpression expression = new ();
+            BindingExpression expression = new();
             while (_it.Has && _it.Current.Type != TokenType.Comma && _it.Current.Type != TokenType.ParenthesisClose)
             {
                 Take(expression);

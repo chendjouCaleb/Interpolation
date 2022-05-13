@@ -220,18 +220,18 @@ namespace InterpolationTests
 
 
         [Test]
-        [TestCase("((", "(")]
-        [TestCase(")+", ")")]
-        [TestCase("((", "(")]
-        [TestCase(")+", ")")]
-        [TestCase("()", "(")]
-        public void TakeParenthesis(string text, string op)
+        [TestCase("((", "(", TokenType.ParenthesisOpen)]
+        [TestCase(")+", ")", TokenType.ParenthesisClose)]
+        [TestCase("((", "(", TokenType.ParenthesisOpen)]
+        [TestCase(")+", ")", TokenType.ParenthesisClose)]
+        [TestCase("()", "(", TokenType.ParenthesisOpen)]
+        public void TakeParenthesis(string text, string op, TokenType type)
         {
             Tokenizer tokenizer = new(text);
             Token token = tokenizer.TakeParenthesis();
             Assert.NotNull(token);
             Assert.AreEqual(op, token.Value);
-            Assert.AreEqual(TokenType.Parenthesis, token.Type);
+            Assert.AreEqual(type, token.Type);
             Assert.AreEqual(TokenIndex.Zero, token.StartIndex);
 
             Assert.AreEqual(TokenIndex.To(1), tokenizer.Index);

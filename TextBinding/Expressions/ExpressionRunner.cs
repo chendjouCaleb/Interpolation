@@ -7,7 +7,12 @@ namespace TextBinding.Expressions
 {
     public class ExpressionRunner
     {
-        private Iterator<IExpressionItem> _it;
+        private readonly Iterator<IExpressionItem> _it;
+
+        private readonly OperatorFactory _operatorFactory =
+            new(new[] {typeof(RealOperatorOverload),
+                typeof(BooleanOperatorOverload),
+                typeof(IntegerOperatorOverload)});
 
         public ExpressionRunner(List<IExpressionItem> items)
         {
@@ -20,25 +25,29 @@ namespace TextBinding.Expressions
             if (_it.Has)
             {
                 result = Call(_it.Current);
+
                 //_it.Next();
             }
 
-            while (_it.Has && _it.Current.IsArithmeticOperator)
+            while (_it.Has && _it.Current is OperatorExpressionItem op)
             {
-                result = CallOperator(result, _it.Current as OperatorExpressionItem);
+                result = CallOperator(result, op);
             }
 
             Console.WriteLine("Result: " + result);
+            // Console.WriteLine("Stop: " + _it.Current.GetType());
 
             return result;
         }
 
         public object Call(IExpressionItem item)
         {
-            if (item is OperatorExpressionItem op && op.IsUnary)
+            Console.WriteLine(item.GetType());
+            if (item is OperatorExpressionItem op && op.Operator.Type == OperatorType.Unary)
             {
                 return CallUnaryOperator(op);
-            }else if (item is ValueExpressionItem value)
+            }
+            else if (item is ValueExpressionItem value)
             {
                 return CallValue(value);
             }
@@ -48,19 +57,23 @@ namespace TextBinding.Expressions
 
         public object CallValue(ValueExpressionItem item)
         {
-            object result = null;
+            object result;
             if (item is SubExpressionItem subExpressionItem)
             {
-               result = new ExpressionRunner(new List<IExpressionItem>(subExpressionItem.Expression.Items)).Call();
+                result = new ExpressionRunner(new List<IExpressionItem>(subExpressionItem.Expression.Items)).Call();
             }
-            else if (item is LiteralExpressionItem value)
+            else if (item is IntegerExpressionItem value)
             {
                 result = value.Value;
+            } else if (item is BooleanExpressionItem boolean)
+            {
+                result = boolean.Value;
             }
             else
             {
                 throw new InvalidOperationException("Handle expression type: " + item);
             }
+
             _it.Next();
             return result;
         }
@@ -68,64 +81,52 @@ namespace TextBinding.Expressions
 
         private object CallUnaryOperator(OperatorExpressionItem op)
         {
-            DoubleOperatorOverload operatorOverload = new();
             _it.Next();
             object value = CallValue(_it.Current as ValueExpressionItem);
-            object result = null;
-            if (op.Name == "+")
+            OperatorMethod? method = _operatorFactory.Find(op.Operator.Name, value.GetType());
+          
+            if (method != null)
             {
-                result = operatorOverload.Plus(value);
-            }
-            else if (op.Name == "-")
-            {
-                result = operatorOverload.Minus(value);
-            }
-            else
-            {
-                throw new InvalidOperationException("Unhandled unary operator: " + op.Name);
+                return method.Call(value);
             }
 
-            _it.Next();
-            return result;
+            string m = $"The are no overload for operator: {op.Name}, Type: {value.GetType()}.";
+            throw new InvalidOperationException(m);
         }
 
         private object CallOperator(object currentValue, OperatorExpressionItem op)
         {
-            DoubleOperatorOverload operatorOverload = new();
-            object result = null;
             // Skip current op.
             _it.Next();
-
+            Console.WriteLine("Current: " + _it.Current);
             object value = Call(_it.Current);
-            _it.Next();
+            //_it.Next();
 
-            while (_it.Has && _it.Current is OperatorExpressionItem subOp && subOp.Order() > op.Order())
+
+            while (_it.Has && _it.Current is OperatorExpressionItem subOp && subOp.Operator.Order > op.Operator.Order)
             {
                 value = CallOperator(value, subOp);
             }
 
-            if (op.Name == "+")
+            if (op.Name == "&&")
             {
-                result = operatorOverload.Add(currentValue, value);
+                return (bool) currentValue && (bool) value;
             }
-            else if (op.Name == "-")
+            
+            if (op.Name == "||")
             {
-                result = operatorOverload.Subtract(currentValue, value);
-            }
-            else if (op.Name == "*")
-            {
-                result = operatorOverload.Multiply(currentValue, value);
-            }
-            else if (op.Name == "/")
-            {
-                result = operatorOverload.Divide(currentValue, value);
-            }
-            else if (op.Name == "%")
-            {
-                result = operatorOverload.Modulo(currentValue, value);
+                return (bool) currentValue || (bool) value;
             }
 
-            return result;
+            OperatorMethod? method = _operatorFactory.Find(op.Name, currentValue.GetType(), value.GetType());
+
+            if (method != null)
+            {
+                return method.Call(currentValue, value);
+            }
+
+            string m = $"No Overload for operator: {op.Name}, Type: {currentValue.GetType()}, Type: {value.GetType()}";
+            throw new InvalidOperationException(m);
         }
     }
 }

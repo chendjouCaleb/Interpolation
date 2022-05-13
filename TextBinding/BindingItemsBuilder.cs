@@ -28,7 +28,7 @@ namespace TextBinding
                 }
                 else if (_it.Current.Type == TokenType.Open)
                 {
-                    _it.Next();
+                   
                     BindingExpression expression = new ();
                     ExpressionBuilder builder = new (_it);
                     builder.Build(expression);

@@ -19,6 +19,8 @@
         Property,
         SubExpression,
         Number,
-        String
+        String,
+        Integer,
+        Boolean
     }
 }

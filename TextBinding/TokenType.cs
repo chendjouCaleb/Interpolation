@@ -5,7 +5,6 @@
         Text,
         ParenthesisOpen,
         ParenthesisClose,
-        Parenthesis,
         Brackets,
         Property,
         Punctuator,

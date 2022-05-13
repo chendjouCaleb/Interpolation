@@ -1,50 +1,30 @@
 ﻿using System.Linq;
+using TextBinding.Operators;
 
 namespace TextBinding.Expressions
 {
     public class OperatorExpressionItem : IExpressionItem
     {
-        private string[] EqualityOperators = {"==", "!="};
-        private string[] RelationalOperators = {"<", ">", "<=", ">="};
-        private string[] AdditiveOperators = {"+", "-"};
-        private string[] MultiplicativeOperators = {"*", "/", "%"};
-        public string Name { get; set; }
-        public bool IsUnary { get; set; }
-        public bool IsBinary { get; set; }
+        // private static string[] EqualityOperators = {"==", "!="};
+        // private static string[] RelationalOperators = {"<", ">", "<=", ">="};
+        // private static string[] AdditiveOperators = {"+", "-"};
+        // private static string[] MultiplicativeOperators = {"*", "/", "%"};
+        public Operator Operator { get; init; }
+
+        public OperatorExpressionItem(Operator @operator)
+        {
+            Operator = @operator;
+        }
+
+        public string Name => Operator.Name;
 
         public override string ToString()
         {
-            return Name;
+            return Operator.Name;
         }
 
-        public int Order()
-        {
-            if (AdditiveOperators.Contains(Name) && IsUnary)
-            {
-                return 17;
-            }
-            if (EqualityOperators.Contains(Name))
-            {
-                return 8;
-            }
-            else if (RelationalOperators.Contains(Name))
-            {
-                return 9;
-            }
-            else if (AdditiveOperators.Contains(Name))
-            {
-                return 10;
-            }
-
-            if (MultiplicativeOperators.Contains(Name))
-            {
-                return 11;
-            }
-
-            return 1111;
-        }
+        
 
         public bool IsCallable => false;
-        public bool IsArithmeticOperator => AdditiveOperators.Contains(Name) || MultiplicativeOperators.Contains(Name);
     }
 }

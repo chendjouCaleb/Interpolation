@@ -97,18 +97,18 @@ namespace InterpolationTests
         }
         
         [Test]
-        [TestCase("{{(}}", "(")]
-        [TestCase("{{((}}", "(")]
-        [TestCase("{{)}}", ")")]
-        [TestCase("{{))}}", ")")]
-        public void TakeParenthesisAtParenthesis(string text, string op)
+        [TestCase("{{(}}", "(", TokenType.ParenthesisOpen)]
+        [TestCase("{{((}}", "(", TokenType.ParenthesisOpen)]
+        [TestCase("{{)}}", ")", TokenType.ParenthesisClose)]
+        [TestCase("{{))}}", ")", TokenType.ParenthesisClose)]
+        public void TakeParenthesisAtParenthesis(string text, string op, TokenType type)
         {
             Tokenizer tokenizer = new (text);
             tokenizer.Take(2);
 
             Token token = tokenizer.Tokens.Last;
             Assert.AreEqual(op, token.Value);
-            Assert.AreEqual(TokenType.Parenthesis, token.Type);
+            Assert.AreEqual(type, token.Type);
         }
         
         [Test]
