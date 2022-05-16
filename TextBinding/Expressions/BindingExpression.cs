@@ -13,16 +13,26 @@ namespace TextBinding.Expressions
 
         public Type ReturnType;
 
+        public BindingExpression()
+        {
+        }
+
         public void Add(IExpressionItem item)
         {
             _items.Add(item);
         }
 
 
-        public string Execute()
+        public string Execute(object Model)
         {
-            ExpressionRunner runner = new(_items);
-            return runner.Call().ToString();
+            ExpressionRunner runner = new(_items, Model);
+            object result = runner.Call();
+            if (result != null)
+            {
+                return result.ToString();
+            }
+
+            return "null";
         }
 
         public IExpressionItem First => _items.First();

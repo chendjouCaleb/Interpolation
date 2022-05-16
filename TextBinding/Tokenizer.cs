@@ -9,7 +9,7 @@ namespace TextBinding
         private readonly TokenList _tokens = new();
         public TextIterator Iterator { get; }
 
-        public static string Operators = ".+-*/%!|&=<>?";
+        public static string Operators = "+-*/%!|&=<>";
         public static string Punctuators = ",:;";
         private TextIterator _it => Iterator;
 
@@ -74,6 +74,13 @@ namespace TextBinding
                 else if (_it.IsLetter() || _it.Is('_'))
                 {
                     TakeIdentifier();
+                }else if (_it.Is('?'))
+                {
+                    var token = TakeQuestionMark();
+                   
+                } else if (_it.Is('.'))
+                {
+                    TakeDot();
                 }
                 else if (_it.IsIn(Operators))
                 {
@@ -82,10 +89,12 @@ namespace TextBinding
                 else if (_it.Is('"'))
                 {
                     TakeString();
-                }
-                else if (_it.IsIn(Punctuators))
+                }else if (_it.Is(','))
                 {
-                    TakePunctuators();
+                    TakeSingleSymbol(TokenType.Comma);
+                }else if (_it.Is(':'))
+                {
+                    TakeSingleSymbol(TokenType.Colon);
                 }
                 else if (_it.Is('\''))
                 {
@@ -110,6 +119,49 @@ namespace TextBinding
             {
                 TakeText();
             }
+        }
+
+        public Token TakeQuestionMark()
+        {
+            Token token = HandleQuestionMark();
+            _tokens.Add(token);
+            return token;
+        }
+        public Token HandleQuestionMark()
+        {
+            TokenIndex index = _it.Index;
+            // Skip current '?'
+            _it.Next();
+            if (_it.Is('.'))
+            {
+                return TakeNullConditionalMemberAccess(index);
+            }
+            if (_it.Is('?'))
+            {
+                return TakeNullCoalescing(index);
+            }
+
+            return new Token("?", TokenType.Operator, index);
+        }
+
+        public Token TakeNullCoalescing(TokenIndex startIndex)
+        {
+            _it.Next();
+            return new Token("??", TokenType.NullCoalescing, startIndex);
+        }
+        
+        public Token TakeNullConditionalMemberAccess(TokenIndex startIndex)
+        {
+            _it.Next();
+            return new Token("?.", TokenType.NullConditionalMemberAccess, startIndex);
+        }
+
+        public Token TakeDot()
+        {
+            Token token = new(".", TokenType.MemberAccess, _it.Index);
+            _tokens.Add(token);
+            _it.Next();
+            return token;
         }
 
         public Token TakeText()
@@ -167,7 +219,17 @@ namespace TextBinding
                 _it.Next();
             }
 
-            Token token = new Token(builder.ToString(), TokenType.Id, index);
+            string value = builder.ToString();
+            TokenType type = TokenType.Id;
+            if (value == "true" || value == "false")
+            {
+                type = TokenType.Boolean;
+            }else if (value == "null")
+            {
+                type = TokenType.Null;
+            }
+
+            Token token = new (value, type, index);
 
             _tokens.Add(token);
             return token;
@@ -283,13 +345,11 @@ namespace TextBinding
             _tokens.Add(token);
             return token;
         }
+        
 
-
-        public Token TakePunctuators()
+        public Token TakeSingleSymbol(TokenType type)
         {
-            Assertions.IsTrue(_it.IsIn(Punctuators));
-
-            Token token = new(_it.Current.ToString(), TokenType.Punctuator, _it.Index);
+            Token token = new(_it.Current.ToString(), type, _it.Index);
             _it.Next();
             _tokens.Add(token);
             return token;
@@ -298,13 +358,12 @@ namespace TextBinding
 
         public Token TakeReal()
         {
-            Console.WriteLine("Current: " + _it.Current);
             Assertions.IsTrue(_it.IsIn("123456789"));
             
             var index = _it.Index;
 
             var builder = new StringBuilder();
-            while (_it.IsIn("123467890"))
+            while (_it.IsIn("1234567890"))
             {
                 builder.Append(_it.Current);
                 _it.Next();
@@ -375,7 +434,7 @@ namespace TextBinding
                 _it.Next();
             }
 
-            while (_it.IsIn("123467890"))
+            while (_it.IsIn("1234567890"))
             {
                 builder.Append(_it.Current);
                 _it.Next();
@@ -393,7 +452,7 @@ namespace TextBinding
 
             // Skip current o
             _it.Next();
-            while (_it.IsIn("0123467"))
+            while (_it.IsIn("01234567"))
             {
                 builder.Append(_it.Current);
                 _it.Next();

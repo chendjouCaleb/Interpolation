@@ -2,16 +2,12 @@
 {
     public class TextBindingItem:IBindingItem
     {
-        private string _text;
+        public string Text { get;}
 
         public TextBindingItem(string text)
         {
-            _text = text;
+            Text = text;
         }
 
-        public string Execute()
-        {
-            return _text;
-        }
     }
 }

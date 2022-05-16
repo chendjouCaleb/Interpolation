@@ -9,11 +9,13 @@ namespace TextBinding
     {
         private Iterator<Token> _it;
         public BindingItems Items { get; private set; }
+        public object Model { get; set; }
 
-        public BindingItemsBuilder(IList<Token> tokens)
+        public BindingItemsBuilder(IList<Token> tokens, object model)
         {
             _it = new (tokens);
-            Items = new BindingItems();
+            Items = new BindingItems(model);
+            Model = model;
         }
 
 

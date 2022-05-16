@@ -1,10 +1,11 @@
 ﻿<wpf:ResourceDictionary xml:space="preserve" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:s="clr-namespace:System;assembly=mscorlib" xmlns:ss="urn:shemas-jetbrains-com:settings-storage-xaml" xmlns:wpf="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
-	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=2bb070c8_002De023_002D4491_002Daee9_002D06b64d126da4/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" IsActive="True" Name="TakeCharLiteral" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;&#xD;
+	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=2bb070c8_002De023_002D4491_002Daee9_002D06b64d126da4/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" Name="TakeCharLiteral" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;&#xD;
   &lt;TestAncestor&gt;&#xD;
     &lt;TestId&gt;NUnit3x::D754621C-4867-4C62-B65D-E5B30A73EDEE::net6.0::InterpolationTests.TokenizerTests&lt;/TestId&gt;&#xD;
+    &lt;TestId&gt;NUnit3x::D754621C-4867-4C62-B65D-E5B30A73EDEE::net6.0::InterpolationTests.ExpressionBuilderTests&lt;/TestId&gt;&#xD;
   &lt;/TestAncestor&gt;&#xD;
 &lt;/SessionState&gt;</s:String>
-	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=e906cb01_002Da5b6_002D465a_002Da7b6_002D9bb93c9daed5/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" Name="Create" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;&#xD;
+	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=e906cb01_002Da5b6_002D465a_002Da7b6_002D9bb93c9daed5/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" IsActive="True" Name="Create" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;&#xD;
   &lt;TestAncestor&gt;&#xD;
     &lt;TestId&gt;NUnit3x::D754621C-4867-4C62-B65D-E5B30A73EDEE::net6.0::InterpolationTests.TokenizerTests&lt;/TestId&gt;&#xD;
     &lt;TestId&gt;NUnit3x::D754621C-4867-4C62-B65D-E5B30A73EDEE::net6.0::InterpolationTests.TokenizerTakeTests.TakeParenthesis&lt;/TestId&gt;&#xD;
@@ -12,5 +13,6 @@
     &lt;TestId&gt;NUnit3x::D754621C-4867-4C62-B65D-E5B30A73EDEE::net6.0::InterpolationTests.TokenizerTakeTests.TakePunctuator&lt;/TestId&gt;&#xD;
     &lt;TestId&gt;NUnit3x::D754621C-4867-4C62-B65D-E5B30A73EDEE::net6.0::InterpolationTests.TokenizerTakeTests&lt;/TestId&gt;&#xD;
     &lt;TestId&gt;NUnit3x::D754621C-4867-4C62-B65D-E5B30A73EDEE::net6.0::InterpolationTests.OperatorFactoryTest.TryAdd_OperatorWithInvalidReturnType_ShouldThrow&lt;/TestId&gt;&#xD;
+    &lt;TestId&gt;NUnit3x::D754621C-4867-4C62-B65D-E5B30A73EDEE::net6.0::InterpolationTests.ExpressionBuilderTests&lt;/TestId&gt;&#xD;
   &lt;/TestAncestor&gt;&#xD;
 &lt;/SessionState&gt;</s:String></wpf:ResourceDictionary>

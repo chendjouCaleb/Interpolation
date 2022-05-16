@@ -8,7 +8,7 @@ using TextBinding.Operators;
 //Tokenizer tokenizer = new Tokenizer("bonjour et bienvenue {{(1+2)*4-5%4+x+\"bonjour à tous\" + user.name.surname}}");
 //Tokenizer tokenizer = new Tokenizer("bonjour et bienvenue {{ 1.1.e+2*4-5%4+(1+2*((1))) + cos().x(a+b, b).x + (user.x) }} et sot");
 //Tokenizer tokenizer = new Tokenizer("bonjour et bienvenue {{ 3*-3}} et sot {{((1)+(2))}}");
-Tokenizer tokenizer = new Tokenizer("bonjour et bienvenue {{true && false}}.");
+Tokenizer tokenizer = new Tokenizer("bonjour et bienvenue {{FirstName}} et {{LastName}}.");
 tokenizer.Tokenize();
 var tokens = tokenizer.Tokens;
 
@@ -20,9 +20,14 @@ foreach (Token token in tokens)
     //Console.WriteLine(token);
 }
 
+User user = new User
+{
+    FirstName = "Chendjou",
+    LastName = "Caleb",
+    Birthday = new DateTime(1996, 12, 6, 10, 10, 10)
+};
 
-
-BindingItemsBuilder builder = new (tokenizer.Tokens.ToList());
+BindingItemsBuilder builder = new (tokenizer.Tokens.ToList(), user);
 
 builder.Build();
 BindingItems bindingItems = builder.Items;

@@ -1,4 +1,5 @@
-﻿using NUnit.Framework;
+﻿using System;
+using NUnit.Framework;
 using TextBinding;
 using TextBinding.Expressions;
 using TextBinding.Operators;
@@ -45,7 +46,7 @@ namespace InterpolationTests
         [TestCase("{{+1/1}}", "/", 2)]
         [TestCase("{{true && false}}", "&&", 1)]
         [TestCase("{{true || false}}", "||", 1)]
-        [TestCase("{{x ?? 10}}", "??", 1)]
+        //[TestCase("{{x ?? 10}}", "??", 1)]
         [TestCase("{{x == 10}}", "==", 1)]
         [TestCase("{{x != 10}}", "!=", 1)]
         [TestCase("{{x < y}}", "<", 1)]
@@ -53,15 +54,32 @@ namespace InterpolationTests
         [TestCase("{{x <= y}}", "<=", 1)]
         [TestCase("{{x > y}}", ">", 1)]
         [TestCase("{{x >= y}}", ">=", 1)]
-        [TestCase("{{x ? 10:5}}", "?", 1)]
+       [TestCase("{{x ? 10:5}}", "?", 1)]
         public void TakeBinaryOperator(string text, string name, int index)
-        {
+       {
+           
             ExpressionBuilder builder = new(GetTokens(text));
             var item = builder.Build().At<OperatorExpressionItem>(index);
 
             Assert.NotNull(item);
             Assert.AreEqual(name, item.Operator.Name);
             Assert.AreEqual(OperatorType.Binary, item.Operator.Type);
+        }
+
+
+        [Test]
+        [TestCase("{{x.name}}",  false)]
+        [TestCase("{{x?.name}}", true)]
+        [TestCase("{{1.name}}", false)]
+        [TestCase("{{1?.name}}",  true)]
+        [TestCase("{{(x).name}}",  false)]
+        public void TakeMemberAccess(string text, bool conditional)
+        {
+            ExpressionBuilder builder = new(GetTokens(text));
+            var item = builder.Build().At<MemberAccessExpressionItem>(1);
+
+            Assert.NotNull(item);
+            Assert.AreEqual(conditional, item.Conditional);
         }
 
         [Test]
@@ -98,6 +116,35 @@ namespace InterpolationTests
             Assert.AreEqual("value", item.Name);
             Assert.AreEqual(ExpressionValueType.Property, item.ExpressionType);
         }
+
+        [Test]
+        public void TakeMethod()
+        {
+            string text = "{{value()}}";
+            ExpressionBuilder builder = new(GetTokens(text));
+            var item = builder.Build().At<MethodExpressionItem>(0);
+        
+            Assert.NotNull(item);
+            Assert.AreEqual("value", item.Name);
+            Assert.AreEqual(ExpressionValueType.Method, item.ExpressionType);
+        }
+        
+        [Test]
+        public void TakeMethodWithParams()
+        {
+            string text = "{{value(1+1, 3)}}";
+            ExpressionBuilder builder = new(GetTokens(text));
+            var item = builder.Build().At<MethodExpressionItem>(0);
+        
+            Assert.NotNull(item);
+            Assert.AreEqual("value", item.Name);
+            Assert.AreEqual(ExpressionValueType.Method, item.ExpressionType);
+            Assert.AreEqual(2, item.ParamExpressions.Count);
+        }
+        
+        
+        
+        
 
         private Iterator<Token> GetTokens(string text)
         {

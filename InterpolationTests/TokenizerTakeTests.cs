@@ -1,4 +1,5 @@
-﻿using NUnit.Framework;
+﻿using System;
+using NUnit.Framework;
 using TextBinding;
 using TextBinding.Utilities;
 
@@ -130,6 +131,37 @@ namespace InterpolationTests
         [Test]
         [TestCase("false")]
         [TestCase("true")]
+        public void TakeBoolean(string text)
+        {
+            Tokenizer tokenizer = new(text);
+            Token token = tokenizer.TakeIdentifier();
+            Console.WriteLine(token.Value);
+            Assert.NotNull(token);
+            Assert.AreEqual(TokenType.Boolean, token.Type);
+            Assert.AreEqual(text, token.Value);
+            
+            Assert.AreEqual(TokenIndex.Zero, token.StartIndex);
+
+            Assert.AreEqual(new TokenIndex(text.Length, 0, text.Length), tokenizer.Index);
+            Assert.AreEqual(tokenizer.Tokens.Count, 1);
+        }
+        
+        [Test]
+        [TestCase("null")]
+        public void TakeNull(string text)
+        {
+            Tokenizer tokenizer = new(text);
+            Token token = tokenizer.TakeIdentifier();
+            Assert.NotNull(token);
+            Assert.AreEqual(text, token.Value);
+            Assert.AreEqual(TokenType.Null, token.Type);
+            Assert.AreEqual(TokenIndex.Zero, token.StartIndex);
+
+            Assert.AreEqual(new TokenIndex(text.Length, 0, text.Length), tokenizer.Index);
+            Assert.AreEqual(tokenizer.Tokens.Count, 1);
+        }
+        
+        [Test]
         [TestCase("_e_a1")]
         [TestCase("_32")]
         [TestCase("_text11")]
@@ -150,7 +182,6 @@ namespace InterpolationTests
 
 
         [Test]
-        [TestCase('.')]
         [TestCase('+')]
         [TestCase('-')]
         [TestCase('*')]
@@ -162,7 +193,6 @@ namespace InterpolationTests
         [TestCase('=')]
         [TestCase('<')]
         [TestCase('>')]
-        [TestCase('?')]
         public void TakeSingleOperator(char c)
         {
             string text = c.ToString();
@@ -178,7 +208,6 @@ namespace InterpolationTests
         }
 
         [Test]
-        [TestCase("?.")]
         [TestCase("==")]
         [TestCase("<=")]
         [TestCase("<=")]
@@ -197,9 +226,24 @@ namespace InterpolationTests
             Assert.AreEqual(tokenizer.Tokens.Count, 1);
         }
 
+        
+        [Test]
+        [TestCase(".", ".", TokenType.MemberAccess)]
+        public void TakeDot_ShouldTakeMemberAccess(string text, string op, TokenType type)
+        {
+            Tokenizer tokenizer = new(text);
+            Token token = tokenizer.TakeDot();
+            Assert.NotNull(token);
+            Assert.AreEqual(text, token.Value);
+            Assert.AreEqual(type, token.Type);
+            Assert.AreEqual(TokenIndex.Zero, token.StartIndex);
+
+            Assert.AreEqual(TokenIndex.To(text.Length), tokenizer.Index);
+            Assert.AreEqual(tokenizer.Tokens.Count, 1);
+        }
+
 
         [Test]
-        [TestCase("?.k")]
         [TestCase("==")]
         [TestCase("<=1")]
         [TestCase("<=e")]
@@ -216,6 +260,23 @@ namespace InterpolationTests
 
             Assert.AreEqual(TokenIndex.To(2), tokenizer.Index);
             Assert.AreEqual(tokenizer.Tokens.Count, 1);
+        }
+
+        [Test]
+        [TestCase("??", "??", TokenType.NullCoalescing)]
+        [TestCase("?.", "?.", TokenType.NullConditionalMemberAccess)]
+        [TestCase("?", "?", TokenType.Operator)]
+        public void TakeQuestionMarkShouldReturnOperator(string text, string op, TokenType type)
+        {
+            Tokenizer tokenizer = new(text);
+            Token token = tokenizer.TakeQuestionMark();
+            Assert.NotNull(token);
+            Assert.AreEqual(op, token.Value);
+            Assert.AreEqual(type, token.Type);
+            Assert.AreEqual(TokenIndex.Zero, token.StartIndex);
+
+            Assert.AreEqual(TokenIndex.To(op.Length), tokenizer.Index);
+            Assert.AreEqual( 1, tokenizer.Tokens.Count);
         }
 
 
@@ -258,18 +319,16 @@ namespace InterpolationTests
         }
 
         [Test]
-        [TestCase(",", ",")]
-        [TestCase(":", ":")]
-        [TestCase(";", ";")]
-        [TestCase(",;", ",")]
-        [TestCase(";+", ";")]
-        public void TakePunctuator(string text, string op)
+        [TestCase(",", ",", TokenType.Comma)]
+        [TestCase(":", ":", TokenType.Colon)]
+        [TestCase(",;", ",", TokenType.Comma)]
+        public void TakeSingleSymbols(string text, string op, TokenType type)
         {
             Tokenizer tokenizer = new(text);
-            Token token = tokenizer.TakePunctuators();
+            Token token = tokenizer.TakeSingleSymbol(type);
             Assert.NotNull(token);
             Assert.AreEqual(op, token.Value);
-            Assert.AreEqual(TokenType.Punctuator, token.Type);
+            Assert.AreEqual(type, token.Type);
             Assert.AreEqual(TokenIndex.Zero, token.StartIndex);
 
             Assert.AreEqual(TokenIndex.To(1), tokenizer.Index);

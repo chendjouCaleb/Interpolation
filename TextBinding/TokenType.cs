@@ -7,22 +7,33 @@
         ParenthesisClose,
         Brackets,
         Property,
+        Member,
         Punctuator,
         String,
         Id,
         Open,
         Close,
-        Methods,
         Char,
         Number,
         Operator,
+        
         Comma,
-        Dot,
+        Colon,
+        SemiColon,
+        MemberAccess,
+        NullConditionalMemberAccess,
+        Negation,
+        NullCoalescing,
+        Conditional,
+        
         Decimal,
         Binary,
         Octal,
         Hexadecimal,
-        Integer
+        Integer,
+        
+        Boolean,
+        Null
         
     }
 }

@@ -30,6 +30,11 @@ namespace TextBinding.Expressions
                 Take(expression);
             }
 
+            if (_it.Has && _it.Current.Type != TokenType.Close)
+            {
+                throw new InvalidOperationException("Invalid token for expression: " + _it.Current);
+            }
+
             if (_it.Has && _it.Current.Type == TokenType.Close)
             {
                 _it.Next();
@@ -65,20 +70,34 @@ namespace TextBinding.Expressions
             {
                 TakeSubExpression(expression);
             }
+            else if (_it.Has && _it.Current.Type == TokenType.Boolean)
+            {
+                TakeBoolean(expression);
+            }
+            else if (_it.Has && _it.Current.Type == TokenType.Null)
+            {
+                TakeNull(expression);
+            }
             else if (_it.Has && _it.Current.Type == TokenType.Id)
             {
-                HandleWord(expression);
+                HandleMember(expression);
+            }
+            else if (_it.Has && _it.Current.Type == TokenType.Colon)
+            {
+                TakeTernarySeparator(expression);
+            }else if (_it.Has && _it.Current.Type == TokenType.MemberAccess)
+            {
+                TakeMemberAccess(expression);
+            }else if (_it.Has && _it.Current.Type == TokenType.NullConditionalMemberAccess)
+            {
+                TakeMemberAccess(expression);
             }
 
             if (_it.Has && _it.Current.Type == TokenType.Operator)
             {
                 TakeBinaryOperator(expression);
             }
-
-            // else
-            // {
-            //     throw new InvalidOperationException("Invalid token for expression: " + _it.Current);
-            // }
+            
         }
 
         private IntegerExpressionItem TakeInteger(BindingExpression expression)
@@ -93,60 +112,63 @@ namespace TextBinding.Expressions
             return item;
         }
 
-        private void HandleWord(BindingExpression expression)
+
+        private void TakeBoolean(BindingExpression expression)
         {
-            if (_it.Has && _it.Current.Value == "true")
-            {
-                BooleanExpressionItem item = new(true);
-                _it.Next();
-                expression.Add(item);
-            }
-            else if (_it.Has && _it.Current.Value == "false")
-            {
-                BooleanExpressionItem item = new(false);
-                _it.Next();
-                expression.Add(item);
-            }
-            else if (_it.Current.Value == "null")
-            {
-                NullExpressionItem item = new();
-                _it.Next();
-                expression.Add(item);
-            }
-            else
-            {
-                PropertyExpressionItem item = new();
-                item.ExpressionType = ExpressionValueType.Property;
-                item.Name = _it.Current.Value;
-                _it.Next();
-                expression.Add(item);
-            }
+            BooleanExpressionItem item = new(_it.Current.Value == "true");
+            _it.Next();
+            expression.Add(item);
+        }
+
+        private void TakeNull(BindingExpression expression)
+        {
+            NullExpressionItem item = new();
+            _it.Next();
+            expression.Add(item);
+        }
+
+        private PunctuatorExpressionItem TakeTernarySeparator(BindingExpression expression)
+        {
+            PunctuatorExpressionItem item = new(":");
+            _it.Next();
+            expression.Add(item);
+            return item;
         }
         
-        
+        private MemberAccessExpressionItem TakeMemberAccess(BindingExpression expression)
+        {
+            MemberAccessExpressionItem item = new(_it.Current.Type == TokenType.NullConditionalMemberAccess);
+            _it.Next();
+            expression.Add(item);
+            return item;
+        }
 
 
-        private ValueExpressionItem HandleIdentifier()
+        private ValueExpressionItem HandleMember(BindingExpression expression)
         {
             string identifier = _it.Current.Value;
             _it.Next();
             if (_it.Current.Type == TokenType.ParenthesisOpen)
             {
-                return TakeMethod(identifier);
+                return TakeMethod(identifier, expression);
             }
 
-            return TakeProperty(identifier);
+            return TakeProperty(identifier, expression);
         }
 
-        private void SkipOpen()
+        private PropertyExpressionItem TakeProperty(string identifier, BindingExpression expression)
         {
-            if (_it.Has && _it.Current.Type == TokenType.Open)
+            PropertyExpressionItem item = new()
             {
-                _it.Next();
-            }
+                Name = identifier,
+                ExpressionType = ExpressionValueType.Property
+            };
+            expression.Add(item);
+            return item;
         }
 
-        private MethodExpressionItem TakeMethod(string identifier)
+
+        private MethodExpressionItem TakeMethod(string identifier, BindingExpression expression)
         {
             // Skip '('.
             _it.Next();
@@ -163,26 +185,24 @@ namespace TextBinding.Expressions
 
             // Skip ')'.
             _it.Next();
-            TakeChain(item);
+            expression.Add(item);
 
             return item;
         }
 
-        private PropertyExpressionItem TakeProperty(string identifier)
+
+        private void SkipOpen()
         {
-            PropertyExpressionItem item = new()
+            if (_it.Has && _it.Current.Type == TokenType.Open)
             {
-                Name = identifier,
-                ExpressionType = ExpressionValueType.Property
-            };
-            TakeChain(item);
-            return item;
+                _it.Next();
+            }
         }
 
 
         private void TakeChain(ValueExpressionItem item)
         {
-            if (_it.Has && _it.Current.Type == TokenType.Dot)
+            if (_it.Has && _it.Current.Type == TokenType.MemberAccess)
             {
                 TakeNext(item, null);
             }
@@ -191,25 +211,26 @@ namespace TextBinding.Expressions
         private ValueExpressionItem TakeNext(ValueExpressionItem? item, ValueExpressionItem? prev)
         {
             // Skip .;
-            _it.Next();
-
-            ValueExpressionItem next = HandleIdentifier();
-            //_it.Next();
-            if (prev != null)
-            {
-                prev.Field = next;
-            }
-            else
-            {
-                item.Field = next;
-            }
-
-            if (_it.Has && _it.Current.Type == TokenType.Dot)
-            {
-                TakeNext(item, next);
-            }
-
-            return next;
+            // _it.Next();
+            //
+            // ValueExpressionItem next = HandleMember();
+            // //_it.Next();
+            // if (prev != null)
+            // {
+            //     prev.Field = next;
+            // }
+            // else
+            // {
+            //     item.Field = next;
+            // }
+            //
+            // if (_it.Has && _it.Current.Type == TokenType.Dot)
+            // {
+            //     TakeNext(item, next);
+            // }
+            //
+            // return next;
+            throw new NotImplementedException();
         }
 
 
@@ -307,7 +328,8 @@ namespace TextBinding.Expressions
             else if (token.Value == ">=")
             {
                 item = new(Operator.UpperOrEqualThan);
-            }else if (token.Value == "?")
+            }
+            else if (token.Value == "?")
             {
                 item = new(Operator.Ternary);
             }
@@ -318,6 +340,14 @@ namespace TextBinding.Expressions
                 _it.Next();
             }
 
+            return item;
+        }
+
+        private OperatorExpressionItem? TakeOperator(BindingExpression expression, Operator @operator)
+        {
+            Token token = _it.Current;
+            OperatorExpressionItem item = new(@operator);
+            _it.Next();
             return item;
         }
 
@@ -346,6 +376,7 @@ namespace TextBinding.Expressions
             while (_it.Has && _it.Current.Type != TokenType.Comma && _it.Current.Type != TokenType.ParenthesisClose)
             {
                 Take(expression);
+                //throw new InvalidOperationException();
             }
 
             if (_it.Has && _it.Current.Type == TokenType.Comma)

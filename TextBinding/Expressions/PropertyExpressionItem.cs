@@ -1,9 +1,13 @@
 ﻿using System;
+using System.Reflection;
 
 namespace TextBinding.Expressions
 {
-    public class PropertyExpressionItem:ValueExpressionItem
+    public class PropertyExpressionItem:MemberExpressionItem
     {
+        public PropertyInfo PropertyInfo { get; set; }
+        
+        
         public override string Serialize()
         {
             return Name;

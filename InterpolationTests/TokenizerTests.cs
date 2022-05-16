@@ -5,6 +5,52 @@ namespace InterpolationTests
 {
     public class TokenizerTests
     {
+
+        [Test]
+        [TestCase("true")]
+        [TestCase("false")]
+        public void TakeBoolean(string text)
+        {
+            Tokenizer tokenizer = new ("{{" + text + "}}");
+            tokenizer.Tokenize();
+            Token token = tokenizer.Tokens[1];
+            
+            Assert.AreEqual(TokenType.Boolean, token.Type);
+            Assert.AreEqual(text, token.Value);
+            Assert.AreEqual(2, token.StartIndex.Index);
+        }
+        
+        
+        [Test]
+        public void TakeNull()
+        {
+            Tokenizer tokenizer = new ("{{null}}");
+            tokenizer.Tokenize();
+            Token token = tokenizer.Tokens[1];
+            
+            Assert.AreEqual(TokenType.Null, token.Type);
+            Assert.AreEqual("null", token.Value);
+            Assert.AreEqual(2, token.StartIndex.Index);
+        }
+        
+        
+        [Test]
+        [TestCase("tru")]
+        [TestCase("ad3")]
+        [TestCase("nul")]
+        [TestCase("nu_l")]
+        public void TakeId(string text)
+        {
+            Tokenizer tokenizer = new ("{{" + text + "}}");
+            tokenizer.Tokenize();
+            Token token = tokenizer.Tokens[1];
+            
+            Assert.AreEqual(TokenType.Id, token.Type);
+            Assert.AreEqual(text, token.Value);
+            Assert.AreEqual(2, token.StartIndex.Index);
+        }
+        
+        
         [Test]
         public void TextBeforeOpenShouldBeTakenAsText()
         {
@@ -82,10 +128,7 @@ namespace InterpolationTests
         [TestCase("{{/}}", "/")]
         [TestCase("{{%}}", "%")]
         [TestCase("{{*}}", "*")]
-        [TestCase("{{.}}", ".")]
         [TestCase("{{++}}", "++")]
-        [TestCase("{{?.}}", "?.")]
-        [TestCase("{{+?.+}}", "+?.+")]
         public void TakeOperatorAtOperator(string text, string op)
         {
             Tokenizer tokenizer = new (text);
@@ -128,17 +171,42 @@ namespace InterpolationTests
         
         
         [Test]
-        [TestCase("{{ , }}", ",")]
-        [TestCase("{{ ; }}", ";")]
-        [TestCase("{{ : }}", ":")]
-        public void TakePunctuationAtPunctuator(string text, string op)
+        [TestCase("{{ , }}", ",", TokenType.Comma)]
+        [TestCase("{{ : }}", ":", TokenType.Colon)]
+        public void TakePunctuationAtPunctuator(string text, string op, TokenType type)
         {
             Tokenizer tokenizer = new (text);
             tokenizer.Take(2);
 
             Token token = tokenizer.Tokens.Last;
             Assert.AreEqual(op, token.Value);
-            Assert.AreEqual(TokenType.Punctuator, token.Type);
+            Assert.AreEqual(type, token.Type);
+        }
+        
+        [Test]
+        [TestCase("{{?}}", "?", TokenType.Conditional)]
+        [TestCase("{{?. }}", "?.", TokenType.NullConditionalMemberAccess)]
+        [TestCase("{{?? }}", "??", TokenType.NullCoalescing)]
+        public void TakeQuestionMark(string text, string op, TokenType type)
+        {
+            Tokenizer tokenizer = new (text);
+            tokenizer.Take(2);
+
+            Token token = tokenizer.Tokens.Last;
+            Assert.AreEqual(type, token.Type);
+            Assert.AreEqual(op, token.Value);
+        }
+        
+        [Test]
+        [TestCase("{{.}}", ".", TokenType.MemberAccess)]
+        public void TakeMemberAccess(string text, string op, TokenType type)
+        {
+            Tokenizer tokenizer = new (text);
+            tokenizer.Take(2);
+
+            Token token = tokenizer.Tokens.Last;
+            Assert.AreEqual(type, token.Type);
+            Assert.AreEqual(op, token.Value);
         }
 
 
